@@ -349,6 +349,7 @@ export default function App() {
   const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
   const [shareFeedback, setShareFeedback] = useState('');
   const [repeatedFeedback, setRepeatedFeedback] = useState('');
+  const [statsFeedback, setStatsFeedback] = useState('');
   const [pendingShareTarget, setPendingShareTarget] = useState<ShareTarget | null>(null);
   const [qrInput, setQrInput] = useState('');
   const [parsedQrData, setParsedQrData] = useState<ParsedQrData | null>(null);
@@ -566,6 +567,14 @@ export default function App() {
         ? 'Repetidas apagadas. Mantivemos 1 unidade de cada figurinha.'
         : 'Não há repetidas para apagar.',
     );
+  };
+
+  const clearAllAlbumData = () => {
+    setCodeCounts({});
+    setShowQrCode(false);
+    setShareFeedback('');
+    setRepeatedFeedback('');
+    setStatsFeedback('Álbum reiniciado. Todos os itens voltaram para 0.');
   };
 
   const copyPayloadToClipboard = async (payload: string) => {
@@ -1094,6 +1103,13 @@ export default function App() {
                     <View style={[styles.progressFill, { width: `${stats.progress}%` }]} />
                   </View>
                 </View>
+
+                <View style={styles.statsActionRow}>
+                  <Pressable onPress={clearAllAlbumData} style={styles.clearAllButton}>
+                    <Text style={styles.clearAllButtonText}>Limpar tudo</Text>
+                  </Pressable>
+                </View>
+                {statsFeedback ? <Text style={styles.shareFeedback}>{statsFeedback}</Text> : null}
 
                 <View style={styles.shareBlock}>
                   <Text style={styles.shareTitle}>Compartilhar para trocas</Text>
@@ -1642,6 +1658,26 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     backgroundColor: '#22c55e',
+  },
+  statsActionRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+  },
+  clearAllButton: {
+    minWidth: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#f87171',
+    backgroundColor: '#3f1d1d',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  clearAllButtonText: {
+    color: '#fee2e2',
+    fontSize: 12,
+    fontWeight: '800',
   },
   shareBlock: {
     marginTop: 16,
