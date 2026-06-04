@@ -244,7 +244,6 @@ const countryFlagUriById: Record<string, string> = {
   CRO: 'https://flagcdn.com/w40/hr.png',
   GHA: 'https://flagcdn.com/w40/gh.png',
   PAN: 'https://flagcdn.com/w40/pa.png',
-  CC: 'https://upload.wikimedia.org/wikipedia/commons/c/ce/Coca-Cola_logo.png',
 };
 
 function flagForRow(row: AlbumRow) {
