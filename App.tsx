@@ -985,7 +985,6 @@ export default function App() {
                       <Text style={[styles.country, isTablet && styles.countryTablet]}>{item.country}</Text>
                       {canCollapse ? <Text style={styles.completedMark}>✓</Text> : null}
                     </View>
-                    {expanded ? <Text style={styles.prefix}>Prefixo {item.prefix}</Text> : null}
                   </View>
 
                   {expanded ? (
