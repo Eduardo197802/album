@@ -270,11 +270,16 @@ function buildCodes(row: AlbumRow) {
 }
 
 function chipLabel(code: string) {
-  return code;
+  const label = code.replace(/^[A-Z]+/, '');
+  return label || code;
+}
+
+function controlChipLabel(code: string) {
+  return chipLabel(code);
 }
 
 function shareCodeLabel(code: string) {
-  return code;
+  return chipLabel(code);
 }
 
 function shareRowHeader(row: AlbumRow) {
@@ -1022,7 +1027,7 @@ export default function App() {
                             style={[styles.codeChip, isTablet && styles.codeChipTablet, collected && styles.codeChipCollected]}
                           >
                             <Text style={[styles.codeChipText, isTablet && styles.codeChipTextTablet, collected && styles.codeChipTextCollected]}>
-                              {chipLabel(code)}{qty > 1 ? ` X${qty - 1}` : ''}
+                              {controlChipLabel(code)}{qty > 1 ? ` X${qty - 1}` : ''}
                             </Text>
                           </Pressable>
                         );
