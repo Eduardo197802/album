@@ -348,6 +348,7 @@ export default function App() {
   const [shareScope, setShareScope] = useState<ShareScope>(persistedState?.shareScope ?? 'ambas');
   const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
   const [shareFeedback, setShareFeedback] = useState('');
+  const [repeatedFeedback, setRepeatedFeedback] = useState('');
   const [pendingShareTarget, setPendingShareTarget] = useState<ShareTarget | null>(null);
   const [qrInput, setQrInput] = useState('');
   const [parsedQrData, setParsedQrData] = useState<ParsedQrData | null>(null);
@@ -542,6 +543,29 @@ export default function App() {
       const value = Math.max(0, (current[code] ?? 0) - 1);
       return { ...current, [code]: value };
     });
+  };
+
+  const clearAllRepeated = () => {
+    let changed = false;
+
+    setCodeCounts((current) => {
+      const next = { ...current };
+
+      for (const code of Object.keys(next)) {
+        if ((next[code] ?? 0) > 1) {
+          next[code] = 1;
+          changed = true;
+        }
+      }
+
+      return changed ? next : current;
+    });
+
+    setRepeatedFeedback(
+      changed
+        ? 'Repetidas apagadas. Mantivemos 1 unidade de cada figurinha.'
+        : 'Não há repetidas para apagar.',
+    );
   };
 
   const copyPayloadToClipboard = async (payload: string) => {
@@ -1201,7 +1225,17 @@ export default function App() {
               </>
             ) : activeTab === 'repetidas' ? (
               <View style={styles.repeatedBlock}>
-                <Text style={styles.repeatedTitle}>Figurinhas repetidas</Text>
+                <View style={styles.repeatedHeaderBar}>
+                  <Text style={styles.repeatedTitle}>Figurinhas repetidas</Text>
+                  <Pressable
+                    onPress={clearAllRepeated}
+                    disabled={repeatedGroups.length === 0}
+                    style={[styles.repeatedClearButton, repeatedGroups.length === 0 && styles.repeatedClearButtonDisabled]}
+                  >
+                    <Text style={styles.repeatedClearButtonText}>Apagar todas repetidas</Text>
+                  </Pressable>
+                </View>
+                {repeatedFeedback ? <Text style={styles.shareFeedback}>{repeatedFeedback}</Text> : null}
                 {repeatedGroups.length === 0 ? (
                   <Text style={styles.empty}>Nenhuma repetida ainda.</Text>
                 ) : (
@@ -1892,11 +1926,36 @@ const styles = StyleSheet.create({
   repeatedBlock: {
     marginTop: 14,
   },
+  repeatedHeaderBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
   repeatedTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
-    marginBottom: 10,
+  },
+  repeatedClearButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#f87171',
+    backgroundColor: '#3f1d1d',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  repeatedClearButtonDisabled: {
+    borderColor: '#475569',
+    backgroundColor: '#1e293b',
+    opacity: 0.7,
+  },
+  repeatedClearButtonText: {
+    color: '#fee2e2',
+    fontSize: 12,
+    fontWeight: '800',
   },
   repeatedList: {
     gap: 8,
