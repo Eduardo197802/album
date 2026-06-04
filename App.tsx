@@ -348,8 +348,6 @@ export default function App() {
   const [shareScope, setShareScope] = useState<ShareScope>(persistedState?.shareScope ?? 'ambas');
   const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
   const [shareFeedback, setShareFeedback] = useState('');
-  const [repeatedFeedback, setRepeatedFeedback] = useState('');
-  const [statsFeedback, setStatsFeedback] = useState('');
   const [pendingShareTarget, setPendingShareTarget] = useState<ShareTarget | null>(null);
   const [qrInput, setQrInput] = useState('');
   const [parsedQrData, setParsedQrData] = useState<ParsedQrData | null>(null);
@@ -547,34 +545,23 @@ export default function App() {
   };
 
   const clearAllRepeated = () => {
-    let changed = false;
-
     setCodeCounts((current) => {
       const next = { ...current };
 
       for (const code of Object.keys(next)) {
         if ((next[code] ?? 0) > 1) {
           next[code] = 1;
-          changed = true;
         }
       }
 
-      return changed ? next : current;
+      return next;
     });
-
-    setRepeatedFeedback(
-      changed
-        ? 'Repetidas apagadas. Mantivemos 1 unidade de cada figurinha.'
-        : 'Não há repetidas para apagar.',
-    );
   };
 
   const clearAllAlbumData = () => {
     setCodeCounts({});
     setShowQrCode(false);
     setShareFeedback('');
-    setRepeatedFeedback('');
-    setStatsFeedback('Álbum reiniciado. Todos os itens voltaram para 0.');
   };
 
   const copyPayloadToClipboard = async (payload: string) => {
@@ -1104,13 +1091,6 @@ export default function App() {
                   </View>
                 </View>
 
-                <View style={styles.statsActionRow}>
-                  <Pressable onPress={clearAllAlbumData} style={styles.clearAllButton}>
-                    <Text style={styles.clearAllButtonText}>Limpar tudo</Text>
-                  </Pressable>
-                </View>
-                {statsFeedback ? <Text style={styles.shareFeedback}>{statsFeedback}</Text> : null}
-
                 <View style={styles.shareBlock}>
                   <Text style={styles.shareTitle}>Compartilhar para trocas</Text>
 
@@ -1238,20 +1218,16 @@ export default function App() {
 
                   {shareFeedback ? <Text style={styles.shareFeedback}>{shareFeedback}</Text> : null}
                 </View>
+
+                <View style={styles.statsActionRow}>
+                  <Pressable onPress={clearAllAlbumData} style={styles.clearAllButton}>
+                    <Text style={styles.clearAllButtonText}>Limpar tudo</Text>
+                  </Pressable>
+                </View>
               </>
             ) : activeTab === 'repetidas' ? (
               <View style={styles.repeatedBlock}>
-                <View style={styles.repeatedHeaderBar}>
-                  <Text style={styles.repeatedTitle}>Figurinhas repetidas</Text>
-                  <Pressable
-                    onPress={clearAllRepeated}
-                    disabled={repeatedGroups.length === 0}
-                    style={[styles.repeatedClearButton, repeatedGroups.length === 0 && styles.repeatedClearButtonDisabled]}
-                  >
-                    <Text style={styles.repeatedClearButtonText}>Apagar todas repetidas</Text>
-                  </Pressable>
-                </View>
-                {repeatedFeedback ? <Text style={styles.shareFeedback}>{repeatedFeedback}</Text> : null}
+                <Text style={styles.repeatedTitle}>Figurinhas repetidas</Text>
                 {repeatedGroups.length === 0 ? (
                   <Text style={styles.empty}>Nenhuma repetida ainda.</Text>
                 ) : (
@@ -1277,6 +1253,16 @@ export default function App() {
                     ))}
                   </View>
                 )}
+
+                <View style={styles.repeatedActionRow}>
+                  <Pressable
+                    onPress={clearAllRepeated}
+                    disabled={repeatedGroups.length === 0}
+                    style={[styles.repeatedClearButton, repeatedGroups.length === 0 && styles.repeatedClearButtonDisabled]}
+                  >
+                    <Text style={styles.repeatedClearButtonText}>Apagar todas repetidas</Text>
+                  </Pressable>
+                </View>
               </View>
             ) : activeTab === 'faltantes' ? (
               <View style={styles.repeatedBlock}>
@@ -1962,18 +1948,15 @@ const styles = StyleSheet.create({
   repeatedBlock: {
     marginTop: 14,
   },
-  repeatedHeaderBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
   repeatedTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
+    marginBottom: 10,
+  },
+  repeatedActionRow: {
+    marginTop: 12,
+    flexDirection: 'row',
   },
   repeatedClearButton: {
     borderRadius: 10,
