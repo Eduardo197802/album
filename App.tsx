@@ -48,7 +48,59 @@ type PersistedAppState = {
   expandedRowMap: Record<string, boolean>;
 };
 
-const appStorageKey = 'album-copa-v2-state';
+const appStorageKey = 'album-copa-v2-state-seed-20260604';
+
+const seededMissingByRowId: Partial<Record<AlbumRow['id'], number[]>> = {
+  PGI: [3, 5, 6, 7],
+  FWC: [13],
+  MEX: [5, 6, 11, 12, 15, 17, 18],
+  RSA: [1, 18],
+  KOR: [1, 8, 16, 19, 20],
+  CZE: [3, 8, 10, 11, 13, 17, 18, 19, 20],
+  CAN: [2, 6, 10, 12, 13, 14, 17, 18],
+  BIH: [6, 14, 15, 17, 18, 19],
+  QAT: [5, 7, 17],
+  BRA: [2, 4, 11, 13, 14],
+  MAR: [11],
+  HAI: [2, 6, 10, 13, 15, 19],
+  SCO: [7, 12, 18, 20],
+  USA: [1, 3, 4, 6, 8, 9, 14, 17, 18],
+  PAR: [1, 9, 12, 13],
+  AUS: [3, 6, 15, 16, 20],
+  TUR: [1, 2, 5, 6, 8, 9, 11, 13, 14],
+  GER: [7, 13, 18, 20],
+  CUW: [8, 12, 13, 17, 20],
+  CIV: [2, 6, 7, 11, 16, 17, 20],
+  ECU: [5, 13, 18],
+  NED: [1, 3, 7, 13, 16, 20],
+  JPN: [1, 5, 6, 10],
+  SWE: [2, 3, 6, 8, 10, 11, 12, 15, 16, 20],
+  TUN: [2, 5, 6, 10, 17, 19],
+  BEL: [2, 6, 7, 17, 19],
+  EGY: [3, 4, 7, 13, 14, 15, 18, 19, 20],
+  IRN: [2, 5, 6, 9, 13, 14, 18],
+  NZL: [3, 13, 16],
+  ESP: [1, 4, 13, 20],
+  CPV: [4, 5, 6, 8, 9, 18],
+  KSA: [1, 5, 6],
+  URU: [2, 8, 9, 12, 15, 19],
+  FRA: [2, 5, 10, 13, 15, 19],
+  SEN: [1],
+  IRQ: [1, 3, 4, 9, 10, 16],
+  NOR: [1, 5, 6, 11, 16, 17, 18],
+  ARG: [2, 3, 7, 10, 11, 17, 18, 20],
+  ALG: [3, 10, 11, 12, 16, 18],
+  AUT: [2, 3, 4, 7, 14, 18],
+  JOR: [1, 7, 13, 15, 16, 17, 20],
+  COD: [2, 4, 8, 9, 10, 12, 13, 14, 17, 18],
+  UZB: [1, 2, 3, 6],
+  COL: [6],
+  ENG: [1, 9, 15, 19],
+  CRO: [2, 4, 19],
+  GHA: [4, 10, 12, 19],
+  PAN: [19],
+  CC: [2, 3, 5, 7, 8, 9, 12, 14],
+};
 
 function readPersistedAppState(): Partial<PersistedAppState> | null {
   try {
@@ -269,6 +321,34 @@ function buildCodes(row: AlbumRow) {
   );
 }
 
+function buildCodeFromAlbumNumber(row: AlbumRow, albumNumber: number) {
+  if (row.firstCodeZero && albumNumber === 0) {
+    return '00';
+  }
+
+  return `${row.prefix}${String(albumNumber).padStart(2, '0')}`;
+}
+
+function buildSeededCodeCounts() {
+  const missingCodes = new Set<string>();
+
+  for (const row of albumRows) {
+    const missingNumbers = seededMissingByRowId[row.id] ?? [];
+    for (const albumNumber of missingNumbers) {
+      missingCodes.add(buildCodeFromAlbumNumber(row, albumNumber));
+    }
+  }
+
+  return Object.fromEntries(
+    albumRows
+      .flatMap((row) => buildCodes(row))
+      .filter((code) => !missingCodes.has(code))
+      .map((code) => [code, 1]),
+  ) as Record<string, number>;
+}
+
+const seededCodeCounts = buildSeededCodeCounts();
+
 function chipLabel(code: string) {
   return code;
 }
@@ -344,7 +424,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>(persistedState?.activeTab ?? 'controle');
   const [search, setSearch] = useState(persistedState?.search ?? '');
   const [groupFilter, setGroupFilter] = useState<GroupFilter>(persistedState?.groupFilter ?? 'Todos');
-  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(persistedState?.codeCounts ?? {});
+  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(persistedState?.codeCounts ?? seededCodeCounts);
   const [shareScope, setShareScope] = useState<ShareScope>(persistedState?.shareScope ?? 'ambas');
   const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
   const [shareFeedback, setShareFeedback] = useState('');
