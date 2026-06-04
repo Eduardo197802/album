@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -37,6 +37,39 @@ type ParsedQrData = {
   repeated: Record<string, number>;
   missing: Set<string>;
 };
+
+type PersistedAppState = {
+  codeCounts: Record<string, number>;
+  activeTab: 'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca';
+  search: string;
+  groupFilter: GroupFilter;
+  shareScope: ShareScope;
+  showQrCode: boolean;
+  expandedRowMap: Record<string, boolean>;
+};
+
+const appStorageKey = 'album-copa-v2-state';
+
+function readPersistedAppState(): Partial<PersistedAppState> | null {
+  try {
+    const raw = globalThis?.localStorage?.getItem(appStorageKey);
+    if (!raw) {
+      return null;
+    }
+
+    return JSON.parse(raw) as Partial<PersistedAppState>;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedAppState(state: PersistedAppState) {
+  try {
+    globalThis?.localStorage?.setItem(appStorageKey, JSON.stringify(state));
+  } catch {
+    // persistência indisponível neste ambiente
+  }
+}
 
 const groupColors: Record<string, string> = {
   A: '#f59e0b',
@@ -211,6 +244,7 @@ const countryFlagUriById: Record<string, string> = {
   CRO: 'https://flagcdn.com/w40/hr.png',
   GHA: 'https://flagcdn.com/w40/gh.png',
   PAN: 'https://flagcdn.com/w40/pa.png',
+  CC: 'https://upload.wikimedia.org/wikipedia/commons/c/ce/Coca-Cola_logo.png',
 };
 
 function flagForRow(row: AlbumRow) {
@@ -306,12 +340,14 @@ export default function App() {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>('controle');
-  const [search, setSearch] = useState('');
-  const [groupFilter, setGroupFilter] = useState<GroupFilter>('Todos');
-  const [codeCounts, setCodeCounts] = useState<Record<string, number>>({});
-  const [shareScope, setShareScope] = useState<ShareScope>('ambas');
-  const [showQrCode, setShowQrCode] = useState(false);
+  const persistedState = useMemo(() => readPersistedAppState(), []);
+
+  const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>(persistedState?.activeTab ?? 'controle');
+  const [search, setSearch] = useState(persistedState?.search ?? '');
+  const [groupFilter, setGroupFilter] = useState<GroupFilter>(persistedState?.groupFilter ?? 'Todos');
+  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(persistedState?.codeCounts ?? {});
+  const [shareScope, setShareScope] = useState<ShareScope>(persistedState?.shareScope ?? 'ambas');
+  const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
   const [shareFeedback, setShareFeedback] = useState('');
   const [pendingShareTarget, setPendingShareTarget] = useState<ShareTarget | null>(null);
   const [qrInput, setQrInput] = useState('');
@@ -321,7 +357,7 @@ export default function App() {
   const [scannerLocked, setScannerLocked] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [expandedRowMap, setExpandedRowMap] = useState<Record<string, boolean>>(
-    Object.fromEntries(albumRows.map((row) => [row.id, true])),
+    persistedState?.expandedRowMap ?? Object.fromEntries(albumRows.map((row) => [row.id, true])),
   );
 
   const allCodes = useMemo(() => albumRows.flatMap((row) => buildCodes(row)), []);
@@ -358,6 +394,18 @@ export default function App() {
       total,
     };
   }, [allCodes, codeCounts]);
+
+  useEffect(() => {
+    savePersistedAppState({
+      codeCounts,
+      activeTab,
+      search,
+      groupFilter,
+      shareScope,
+      showQrCode,
+      expandedRowMap,
+    });
+  }, [activeTab, codeCounts, expandedRowMap, groupFilter, search, shareScope, showQrCode]);
 
   const repeatedGroups = useMemo(() => {
     return albumRows
