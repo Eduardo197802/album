@@ -483,7 +483,9 @@ export default function App() {
   const stats = useMemo(() => {
     const collected = allCodes.filter((code) => (codeCounts[code] ?? 0) > 0).length;
     const shinyCodes = allCodes.filter((code) => isShinySticker(code));
+    const cocaCodes = allCodes.filter((code) => isCocaSticker(code));
     const shinyCollected = shinyCodes.filter((code) => (codeCounts[code] ?? 0) > 0).length;
+    const cocaCollected = cocaCodes.filter((code) => (codeCounts[code] ?? 0) > 0).length;
     const duplicates = allCodes.reduce((acc, code) => {
       const qty = codeCounts[code] ?? 0;
       return acc + Math.max(0, qty - 1);
@@ -498,6 +500,8 @@ export default function App() {
       total,
       shinyCollected,
       shinyTotal: shinyCodes.length,
+      cocaCollected,
+      cocaTotal: cocaCodes.length,
     };
   }, [allCodes, codeCounts]);
 
@@ -1457,6 +1461,7 @@ export default function App() {
                   <StatCard label="Duplicadas" value={stats.duplicates.toString()} isTablet={isTablet} />
                   <StatCard label="Progresso" value={`${stats.progress}%`} isTablet={isTablet} />
                   <StatCard label="Brilhantes" value={`${stats.shinyCollected}/${stats.shinyTotal}`} isTablet={isTablet} />
+                  <StatCard label="Coca-Cola" value={`${stats.cocaCollected}/${stats.cocaTotal}`} isTablet={isTablet} />
                 </View>
 
                 <View style={styles.progressBlock}>
