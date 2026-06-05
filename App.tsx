@@ -349,6 +349,10 @@ function isGoldenSticker(code: string) {
   return code === '00' || code.startsWith('FWC') || code.endsWith('01');
 }
 
+function isCocaSticker(code: string) {
+  return code.startsWith('CC');
+}
+
 function shareCodeLabel(code: string) {
   return code;
 }
@@ -1323,6 +1327,7 @@ export default function App() {
                         const qty = codeCounts[code] ?? 0;
                         const collected = qty > 0;
                         const goldenMissing = !collected && isGoldenSticker(code);
+                        const cocaMissing = !collected && isCocaSticker(code);
 
                         return (
                           <Pressable
@@ -1334,6 +1339,7 @@ export default function App() {
                               isTablet && styles.codeChipTablet,
                               collected && styles.codeChipCollected,
                               goldenMissing && styles.codeChipGolden,
+                              cocaMissing && styles.codeChipCoca,
                             ]}
                           >
                             <Text
@@ -1342,6 +1348,7 @@ export default function App() {
                                 isTablet && styles.codeChipTextTablet,
                                 collected && styles.codeChipTextCollected,
                                 goldenMissing && styles.codeChipTextGolden,
+                                cocaMissing && styles.codeChipTextCoca,
                               ]}
                             >
                               {chipLabel(code)}{qty > 1 ? ` X${qty - 1}` : ''}
@@ -1590,6 +1597,7 @@ export default function App() {
                                 styles.missingCodeChip,
                                 isTablet && styles.missingCodeChipTablet,
                                 isGoldenSticker(code) && styles.missingCodeChipGolden,
+                                isCocaSticker(code) && styles.missingCodeChipCoca,
                               ]}
                             >
                               <Text
@@ -1597,6 +1605,7 @@ export default function App() {
                                   styles.missingCodeText,
                                   isTablet && styles.missingCodeTextTablet,
                                   isGoldenSticker(code) && styles.missingCodeTextGolden,
+                                  isCocaSticker(code) && styles.missingCodeTextCoca,
                                 ]}
                               >
                                 {chipLabel(code)}
@@ -2496,6 +2505,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#3a2f10',
     borderColor: '#d4a53a',
   },
+  missingCodeChipCoca: {
+    backgroundColor: '#3a0f14',
+    borderColor: '#dc2626',
+  },
   missingCodeText: {
     color: '#dbe4f0',
     fontSize: 10,
@@ -2503,6 +2516,9 @@ const styles = StyleSheet.create({
   },
   missingCodeTextGolden: {
     color: '#fde68a',
+  },
+  missingCodeTextCoca: {
+    color: '#fecaca',
   },
   missingCodeTextTablet: {
     fontSize: 11,
@@ -2666,6 +2682,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#3a2f10',
     borderColor: '#d4a53a',
   },
+  codeChipCoca: {
+    backgroundColor: '#3a0f14',
+    borderColor: '#dc2626',
+  },
   codeChipText: {
     color: '#dbe4f0',
     fontSize: 10,
@@ -2679,6 +2699,9 @@ const styles = StyleSheet.create({
   },
   codeChipTextGolden: {
     color: '#fde68a',
+  },
+  codeChipTextCoca: {
+    color: '#fecaca',
   },
   expandText: {
     color: '#94a3b8',
