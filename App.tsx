@@ -349,6 +349,14 @@ function isGoldenSticker(code: string) {
   return code === '00' || code.startsWith('FWC') || code.endsWith('01');
 }
 
+function isShinySticker(code: string) {
+  if (code === '00' || code.startsWith('FWC')) {
+    return true;
+  }
+
+  return code.endsWith('01') && !code.startsWith('CC');
+}
+
 function isCocaSticker(code: string) {
   return code.startsWith('CC');
 }
@@ -467,6 +475,8 @@ export default function App() {
 
   const stats = useMemo(() => {
     const collected = allCodes.filter((code) => (codeCounts[code] ?? 0) > 0).length;
+    const shinyCodes = allCodes.filter((code) => isShinySticker(code));
+    const shinyCollected = shinyCodes.filter((code) => (codeCounts[code] ?? 0) > 0).length;
     const duplicates = allCodes.reduce((acc, code) => {
       const qty = codeCounts[code] ?? 0;
       return acc + Math.max(0, qty - 1);
@@ -479,6 +489,8 @@ export default function App() {
       progress: Math.round((collected / total) * 100),
       duplicates,
       total,
+      shinyCollected,
+      shinyTotal: shinyCodes.length,
     };
   }, [allCodes, codeCounts]);
 
@@ -1388,6 +1400,7 @@ export default function App() {
                   <StatCard label="Faltam" value={stats.missing.toString()} isTablet={isTablet} />
                   <StatCard label="Duplicadas" value={stats.duplicates.toString()} isTablet={isTablet} />
                   <StatCard label="Progresso" value={`${stats.progress}%`} isTablet={isTablet} />
+                  <StatCard label="Brilhantes" value={`${stats.shinyCollected}/${stats.shinyTotal}`} isTablet={isTablet} />
                 </View>
 
                 <View style={styles.progressBlock}>
