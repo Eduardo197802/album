@@ -1072,15 +1072,16 @@ export default function App() {
     }
 
     setScannerLocked(true);
-    setQrInput(data);
 
     const parsed = parseQrPayload(data);
     if (!parsed) {
       setParsedQrData(null);
-      setQrFeedback('QR inválido. Tente novamente, sem fechar a câmera, ou cole o conteúdo.');
+      setQrFeedback('QR inválido. Continue apontando para o QR ou cole o conteúdo.');
+      setScannerLocked(false);
       return;
     }
 
+    setQrInput(data);
     setParsedQrData(parsed);
     setQrFeedback('QR lido com sucesso pela câmera. Comparação pronta.');
     setScannerOpen(false);
@@ -2424,8 +2425,7 @@ const styles = StyleSheet.create({
   scannerView: {
     width: '100%',
     height: 240,
-    borderRadius: 10,
-    overflow: 'hidden',
+    backgroundColor: '#000',
   },
   scannerHint: {
     color: '#cbd5e1',
