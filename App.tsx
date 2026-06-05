@@ -1057,6 +1057,40 @@ export default function App() {
         }
       }
 
+      if (Platform.OS === 'ios') {
+        setScannerError('');
+        setScannerOpen(false);
+        setQrFeedback('Abrindo scanner nativo do iPhone...');
+
+        const subscription = CameraView.onModernBarcodeScanned(async ({ data }) => {
+          const parsed = parseQrPayload(data);
+          if (!parsed) {
+            setParsedQrData(null);
+            setQrFeedback('QR inválido. Tente novamente no scanner nativo.');
+            return;
+          }
+
+          setQrInput(data);
+          setParsedQrData(parsed);
+          setQrFeedback('QR lido com sucesso no scanner nativo do iPhone. Comparação pronta.');
+          await CameraView.dismissScanner();
+          subscription.remove();
+        });
+
+        try {
+          await CameraView.launchScanner({
+            barcodeTypes: ['qr'],
+            isGuidanceEnabled: true,
+            isHighlightingEnabled: true,
+            isPinchToZoomEnabled: true,
+          });
+        } finally {
+          subscription.remove();
+        }
+
+        return;
+      }
+
       setScannerError('');
       setScannerCanRead(false);
       setScannerLocked(false);
