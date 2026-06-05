@@ -1077,8 +1077,7 @@ export default function App() {
     const parsed = parseQrPayload(data);
     if (!parsed) {
       setParsedQrData(null);
-      setQrFeedback('QR inválido. Tente novamente ou cole o conteúdo.');
-      setScannerOpen(false);
+      setQrFeedback('QR inválido. Tente novamente, sem fechar a câmera, ou cole o conteúdo.');
       return;
     }
 
