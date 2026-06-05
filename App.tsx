@@ -460,6 +460,7 @@ export default function App() {
   const [qrFeedback, setQrFeedback] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
+  const [scannerReadyAt, setScannerReadyAt] = useState(0);
   const [scannerError, setScannerError] = useState('');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [expandedRowMap, setExpandedRowMap] = useState<Record<string, boolean>>(defaultExpandedRowMap);
@@ -1058,8 +1059,9 @@ export default function App() {
 
       setScannerError('');
       setScannerLocked(false);
+      setScannerReadyAt(Date.now() + 1200);
       setScannerOpen(true);
-      setQrFeedback('Aponte a câmera para o QR.');
+      setQrFeedback('Abrindo câmera... aponte para o QR.');
     } catch {
       setScannerError('Não foi possível inicializar a câmera neste dispositivo.');
       setQrFeedback('Falha ao abrir câmera. Use a opção de colar o QR.');
@@ -1068,6 +1070,10 @@ export default function App() {
 
   const onScanQr = ({ data }: { data: string }) => {
     if (scannerLocked) {
+      return;
+    }
+
+    if (Date.now() < scannerReadyAt) {
       return;
     }
 
