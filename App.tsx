@@ -1120,25 +1120,17 @@ export default function App() {
     setAuthFeedback('Sessão encerrada.');
   };
 
-  return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
+  if (!session?.user) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.glowTop} />
+        <View style={styles.glowBottom} />
 
-      <View style={[styles.appFrame, isTablet && styles.appFrameTablet]}>
-      <View style={styles.cloudCard}>
-        {session?.user ? (
-          <>
-            <Text style={styles.cloudTitle}>Sincronização em nuvem ativa</Text>
-            <Text style={styles.cloudSubtitle}>{session.user.email}</Text>
-            {cloudStatus ? <Text style={styles.cloudStatus}>{cloudStatus}</Text> : null}
-            <Pressable onPress={onSignOut} style={styles.cloudButtonSecondary}>
-              <Text style={styles.cloudButtonSecondaryText}>Sair</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <Text style={styles.cloudTitle}>Entrar para sincronizar na nuvem</Text>
+        <View style={styles.authWrap}>
+          <View style={styles.authCard}>
+            <Text style={styles.authTitle}>Entrar no álbum</Text>
+            <Text style={styles.authSubtitle}>Faça login para sincronizar seu progresso na nuvem.</Text>
+
             <TextInput
               value={authEmail}
               onChangeText={setAuthEmail}
@@ -1148,6 +1140,7 @@ export default function App() {
               keyboardType="email-address"
               style={styles.cloudInput}
             />
+
             <TextInput
               value={authPassword}
               onChangeText={setAuthPassword}
@@ -1157,6 +1150,7 @@ export default function App() {
               secureTextEntry
               style={styles.cloudInput}
             />
+
             <View style={styles.cloudButtonRow}>
               <Pressable onPress={onSignInWithPassword} style={[styles.cloudButtonPrimary, styles.cloudButtonHalf]}>
                 <Text style={styles.cloudButtonPrimaryText}>Entrar</Text>
@@ -1165,10 +1159,26 @@ export default function App() {
                 <Text style={styles.cloudButtonSecondaryText}>Criar conta</Text>
               </Pressable>
             </View>
+
             <Text style={styles.cloudHint}>Use o mesmo login no celular e no computador para manter tudo sincronizado.</Text>
             {authFeedback ? <Text style={styles.cloudStatus}>{authFeedback}</Text> : null}
-          </>
-        )}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
+
+      <View style={[styles.appFrame, isTablet && styles.appFrameTablet]}>
+      <View style={styles.sessionBar}>
+        <Text style={styles.sessionEmail}>{session.user.email}</Text>
+        <Pressable onPress={onSignOut} style={styles.sessionSignOutButton}>
+          <Text style={styles.sessionSignOutText}>Sair</Text>
+        </Pressable>
       </View>
 
       <View style={[styles.tabRow, isTablet && styles.tabRowTablet]}>
@@ -1788,6 +1798,62 @@ const styles = StyleSheet.create({
   appFrameTablet: {
     alignSelf: 'center',
     maxWidth: 980,
+  },
+  authWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  authCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1f2a3d',
+    backgroundColor: '#0b1326',
+    padding: 14,
+    gap: 8,
+  },
+  authTitle: {
+    color: '#e2e8f0',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  authSubtitle: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  sessionBar: {
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1f2a3d',
+    backgroundColor: '#0b1326',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sessionEmail: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  sessionSignOutButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#475569',
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  sessionSignOutText: {
+    color: '#e2e8f0',
+    fontSize: 11,
+    fontWeight: '800',
   },
   cloudCard: {
     marginHorizontal: 14,
