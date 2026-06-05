@@ -346,7 +346,18 @@ function chipLabel(code: string) {
 }
 
 function isGoldenSticker(code: string) {
-  return code === '00' || code.startsWith('FWC') || code.endsWith('01');
+  const normalized = code.trim().toUpperCase();
+
+  if (normalized === '00' || normalized.startsWith('FWC')) {
+    return true;
+  }
+
+  const numericSuffix = normalized.match(/(\d+)$/);
+  if (!numericSuffix) {
+    return false;
+  }
+
+  return Number(numericSuffix[1]) === 1;
 }
 
 function shareCodeLabel(code: string) {
@@ -2493,8 +2504,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   missingCodeChipGolden: {
-    backgroundColor: '#3a2f10',
-    borderColor: '#d4a53a',
+    backgroundColor: '#facc15',
+    borderColor: '#f59e0b',
   },
   missingCodeText: {
     color: '#dbe4f0',
@@ -2502,7 +2513,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   missingCodeTextGolden: {
-    color: '#fde68a',
+    color: '#1f2937',
   },
   missingCodeTextTablet: {
     fontSize: 11,
@@ -2663,8 +2674,8 @@ const styles = StyleSheet.create({
     borderColor: '#22c55e',
   },
   codeChipGolden: {
-    backgroundColor: '#3a2f10',
-    borderColor: '#d4a53a',
+    backgroundColor: '#facc15',
+    borderColor: '#f59e0b',
   },
   codeChipText: {
     color: '#dbe4f0',
@@ -2678,7 +2689,7 @@ const styles = StyleSheet.create({
     color: '#bbf7d0',
   },
   codeChipTextGolden: {
-    color: '#fde68a',
+    color: '#1f2937',
   },
   expandText: {
     color: '#94a3b8',
