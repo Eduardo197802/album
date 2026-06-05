@@ -59,6 +59,12 @@ type CloudAlbumStateRow = {
   expanded_row_map: Record<string, boolean>;
 };
 
+type AuthErrorLike = {
+  status?: number;
+  code?: string;
+  message?: string;
+};
+
 const supabaseUrl = 'https://kkygflqiuguflvnjsjpw.supabase.co';
 const supabasePublishableKey = 'sb_publishable_2qGwkTObYMwUuvTh7-3WVQ_lpQ85SND';
 const supabase = createClient(supabaseUrl, supabasePublishableKey);
@@ -436,6 +442,7 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
+  const [authPending, setAuthPending] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('');
   const [cloudHydrated, setCloudHydrated] = useState(false);
 
@@ -1104,22 +1111,57 @@ export default function App() {
     setShareFeedback(copied ? 'Conteúdo copiado para a área de transferência.' : 'Não foi possível copiar neste ambiente.');
   };
 
+  const resolveAuthErrorMessage = (error: AuthErrorLike | null, action: 'signin' | 'signup') => {
+    if (!error) {
+      return action === 'signin' ? 'Login realizado com sucesso.' : 'Conta criada. Confira seu e-mail para confirmar, se solicitado.';
+    }
+
+    const status = error.status;
+    const code = (error.code ?? '').toLowerCase();
+    const message = (error.message ?? '').toLowerCase();
+
+    if (status === 429 || code.includes('over_') || message.includes('rate limit') || message.includes('too many')) {
+      return 'Muitas tentativas agora. Aguarde 1-2 minutos e tente novamente.';
+    }
+
+    if (action === 'signup' && (message.includes('already registered') || message.includes('already been registered'))) {
+      return 'Este e-mail já possui conta. Tente entrar ou recuperar a senha.';
+    }
+
+    if (action === 'signin' && (message.includes('email not confirmed') || message.includes('not confirmed'))) {
+      return 'E-mail ainda não confirmado. Verifique sua caixa de entrada e spam.';
+    }
+
+    return action === 'signin'
+      ? 'Falha no login. Confira e-mail e senha.'
+      : 'Falha ao criar conta. Tente outro e-mail ou senha mais forte.';
+  };
+
   const onSignInWithPassword = async () => {
+    if (authPending) {
+      return;
+    }
+
     const email = authEmail.trim();
     if (!email || !authPassword) {
       setAuthFeedback('Digite e-mail e senha para entrar.');
       return;
     }
 
+    setAuthPending(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password: authPassword,
     });
-
-    setAuthFeedback(error ? 'Falha no login. Confira e-mail e senha.' : 'Login realizado com sucesso.');
+    setAuthFeedback(resolveAuthErrorMessage(error as AuthErrorLike | null, 'signin'));
+    setAuthPending(false);
   };
 
   const onCreateAccount = async () => {
+    if (authPending) {
+      return;
+    }
+
     const email = authEmail.trim();
     if (!email || !authPassword) {
       setAuthFeedback('Digite e-mail e senha para criar a conta.');
@@ -1129,17 +1171,14 @@ export default function App() {
     const currentHref = (globalThis as any)?.location?.href;
     const emailRedirectTo = typeof currentHref === 'string' ? currentHref.split('#')[0] : undefined;
 
+    setAuthPending(true);
     const { error } = await supabase.auth.signUp({
       email,
       password: authPassword,
       options: { emailRedirectTo },
     });
-
-    setAuthFeedback(
-      error
-        ? 'Falha ao criar conta. Tente outro e-mail ou senha mais forte.'
-        : 'Conta criada. Confira seu e-mail para confirmar, se solicitado.',
-    );
+    setAuthFeedback(resolveAuthErrorMessage(error as AuthErrorLike | null, 'signup'));
+    setAuthPending(false);
   };
 
   const onSignOut = async () => {
@@ -1181,11 +1220,19 @@ export default function App() {
             />
 
             <View style={styles.cloudButtonRow}>
-              <Pressable onPress={onSignInWithPassword} style={[styles.cloudButtonPrimary, styles.cloudButtonHalf]}>
-                <Text style={styles.cloudButtonPrimaryText}>Entrar</Text>
+              <Pressable
+                onPress={onSignInWithPassword}
+                disabled={authPending}
+                style={[styles.cloudButtonPrimary, styles.cloudButtonHalf, authPending && styles.cloudButtonDisabled]}
+              >
+                <Text style={styles.cloudButtonPrimaryText}>{authPending ? 'Aguarde...' : 'Entrar'}</Text>
               </Pressable>
-              <Pressable onPress={onCreateAccount} style={[styles.cloudButtonSecondary, styles.cloudButtonHalf]}>
-                <Text style={styles.cloudButtonSecondaryText}>Criar conta</Text>
+              <Pressable
+                onPress={onCreateAccount}
+                disabled={authPending}
+                style={[styles.cloudButtonSecondary, styles.cloudButtonHalf, authPending && styles.cloudButtonDisabled]}
+              >
+                <Text style={styles.cloudButtonSecondaryText}>{authPending ? 'Aguarde...' : 'Criar conta'}</Text>
               </Pressable>
             </View>
 
@@ -1969,6 +2016,9 @@ const styles = StyleSheet.create({
   },
   cloudButtonHalf: {
     flex: 1,
+  },
+  cloudButtonDisabled: {
+    opacity: 0.6,
   },
   cloudButtonSecondary: {
     borderRadius: 10,
