@@ -1042,6 +1042,80 @@ export default function App() {
     setQrFeedback('QR lido com sucesso. Comparação pronta.');
   };
 
+  const onOpenExternalCamera = async () => {
+    if (Platform.OS !== 'web') {
+      setQrFeedback('Este modo está disponível apenas no navegador.');
+      return;
+    }
+
+    const doc = (globalThis as any)?.document;
+    if (!doc) {
+      setQrFeedback('Não foi possível abrir a câmera externa neste ambiente.');
+      return;
+    }
+
+    const input = doc.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    doc.body.appendChild(input);
+
+    input.onchange = async () => {
+      try {
+        const file = input.files?.[0];
+        if (!file) {
+          setQrFeedback('Nenhuma imagem selecionada.');
+          return;
+        }
+
+        const BarcodeDetectorCtor = (globalThis as any)?.BarcodeDetector;
+        if (!BarcodeDetectorCtor) {
+          setQrFeedback('Seu navegador não suporta leitura por foto. Use Ler com câmera ou Ler texto colado.');
+          return;
+        }
+
+        const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
+        const imageUrl = URL.createObjectURL(file);
+
+        try {
+          const BrowserImage = (globalThis as any).Image;
+          const img = new BrowserImage();
+          img.src = imageUrl;
+          await img.decode();
+          const result = await detector.detect(img);
+          const payload = result?.[0]?.rawValue;
+
+          if (!payload) {
+            setParsedQrData(null);
+            setQrFeedback('Não foi possível identificar QR na foto. Tente novamente.');
+            return;
+          }
+
+          setQrInput(payload);
+          const parsed = parseQrPayload(payload);
+          if (!parsed) {
+            setParsedQrData(null);
+            setQrFeedback('QR da foto é inválido.');
+            return;
+          }
+
+          setParsedQrData(parsed);
+          setQrFeedback('QR lido com sucesso pela foto. Comparação pronta.');
+        } finally {
+          URL.revokeObjectURL(imageUrl);
+        }
+      } catch {
+        setQrFeedback('Falha ao ler QR pela foto.');
+      } finally {
+        doc.body.removeChild(input);
+      }
+    };
+
+    input.click();
+  };
+
   const onOpenScanner = async () => {
     try {
       if (!cameraPermission?.granted) {
@@ -1722,6 +1796,11 @@ export default function App() {
                   <Pressable style={styles.qrReadButton} onPress={onOpenScanner}>
                     <Text style={styles.qrReadButtonText}>Ler com câmera</Text>
                   </Pressable>
+                  {isIosWeb ? (
+                    <Pressable style={styles.qrReadButton} onPress={onOpenExternalCamera}>
+                      <Text style={styles.qrReadButtonText}>Abrir câmera externa</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable style={styles.qrReadButton} onPress={onReadQrPayload}>
                     <Text style={styles.qrReadButtonText}>Ler texto colado</Text>
                   </Pressable>
