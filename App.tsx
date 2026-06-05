@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   Linking,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -459,8 +460,11 @@ export default function App() {
   const [qrFeedback, setQrFeedback] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
+  const [scannerError, setScannerError] = useState('');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [expandedRowMap, setExpandedRowMap] = useState<Record<string, boolean>>(defaultExpandedRowMap);
+
+  const isIosWeb = Platform.OS === 'web' && /iPad|iPhone|iPod/i.test((globalThis as any)?.navigator?.userAgent ?? '');
 
   const allCodes = useMemo(() => albumRows.flatMap((row) => buildCodes(row)), []);
 
@@ -1038,17 +1042,28 @@ export default function App() {
   };
 
   const onOpenScanner = async () => {
-    if (!cameraPermission?.granted) {
-      const response = await requestCameraPermission();
-      if (!response.granted) {
-        setQrFeedback('Permissão de câmera negada. Use a opção de colar o QR.');
-        return;
+    try {
+      if (!cameraPermission?.granted) {
+        const response = await requestCameraPermission();
+        if (!response.granted) {
+          setScannerError('Permissão de câmera negada.');
+          setQrFeedback(
+            isIosWeb
+              ? 'Permissão de câmera negada no iPhone. Libere em Ajustes > Safari > Câmera ou use a opção de colar o QR.'
+              : 'Permissão de câmera negada. Use a opção de colar o QR.',
+          );
+          return;
+        }
       }
-    }
 
-    setScannerLocked(false);
-    setScannerOpen(true);
-    setQrFeedback('Aponte a câmera para o QR.');
+      setScannerError('');
+      setScannerLocked(false);
+      setScannerOpen(true);
+      setQrFeedback('Aponte a câmera para o QR.');
+    } catch {
+      setScannerError('Não foi possível inicializar a câmera neste dispositivo.');
+      setQrFeedback('Falha ao abrir câmera. Use a opção de colar o QR.');
+    }
   };
 
   const onScanQr = ({ data }: { data: string }) => {
@@ -1708,12 +1723,21 @@ export default function App() {
 
                 {scannerOpen ? (
                   <View style={styles.scannerCard}>
+                    {scannerError ? <Text style={styles.scannerError}>{scannerError}</Text> : null}
                     <CameraView
                       style={styles.scannerView}
+                      facing="back"
+                      onMountError={() => {
+                        setScannerError('A câmera não conseguiu iniciar neste aparelho.');
+                        setQrFeedback('A câmera não abriu. Use a opção de colar o QR.');
+                      }}
                       onBarcodeScanned={scannerLocked ? undefined : onScanQr}
                       barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                     />
-                    <Text style={styles.scannerHint}>Enquadre o QR dentro da área da câmera.</Text>
+                    <Text style={styles.scannerHint}>
+                      Enquadre o QR dentro da área da câmera.
+                      {isIosWeb ? ' No iPhone, permita câmera para este site no Safari.' : ''}
+                    </Text>
                     <Pressable style={styles.scannerCloseButton} onPress={() => setScannerOpen(false)}>
                       <Text style={styles.scannerCloseButtonText}>Fechar câmera</Text>
                     </Pressable>
@@ -2406,6 +2430,12 @@ const styles = StyleSheet.create({
   },
   scannerHint: {
     color: '#cbd5e1',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '700',
+  },
+  scannerError: {
+    color: '#fecaca',
     fontSize: 12,
     textAlign: 'center',
     fontWeight: '700',
