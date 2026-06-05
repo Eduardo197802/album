@@ -442,7 +442,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>('controle');
   const [search, setSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState<GroupFilter>('Todos');
-  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(seededCodeCounts);
+  const [codeCounts, setCodeCounts] = useState<Record<string, number>>({});
   const [shareScope, setShareScope] = useState<ShareScope>('ambas');
   const [showQrCode, setShowQrCode] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
@@ -541,19 +541,28 @@ export default function App() {
 
       if (error) {
         setCloudStatus('Erro ao carregar da nuvem.');
-        setCloudHydrated(true);
+        setCloudHydrated(false);
         return;
       }
 
       const row = data as CloudAlbumStateRow | null;
       if (row) {
-        setCodeCounts(row.code_counts ?? seededCodeCounts);
+        setCodeCounts(row.code_counts ?? {});
         setActiveTab(row.active_tab ?? 'controle');
         setSearch(row.search ?? '');
         setGroupFilter(row.group_filter ?? 'Todos');
         setShareScope(row.share_scope ?? 'ambas');
         setShowQrCode(Boolean(row.show_qr_code));
         setExpandedRowMap(row.expanded_row_map ?? defaultExpandedRowMap);
+      } else {
+        // Conta sem estado salvo na nuvem deve iniciar com album zerado.
+        setCodeCounts({});
+        setActiveTab('controle');
+        setSearch('');
+        setGroupFilter('Todos');
+        setShareScope('ambas');
+        setShowQrCode(false);
+        setExpandedRowMap(defaultExpandedRowMap);
       }
 
       setCloudStatus('Nuvem conectada.');
