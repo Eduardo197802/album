@@ -3,6 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useEffect, useMemo, useState } from 'react';
+import { createClient, type Session } from '@supabase/supabase-js';
 import {
   FlatList,
   Image,
@@ -48,7 +49,19 @@ type PersistedAppState = {
   expandedRowMap: Record<string, boolean>;
 };
 
-const appStorageKey = 'album-copa-v2-state-seed-20260604';
+type CloudAlbumStateRow = {
+  code_counts: Record<string, number>;
+  active_tab: PersistedAppState['activeTab'];
+  search: string;
+  group_filter: GroupFilter;
+  share_scope: ShareScope;
+  show_qr_code: boolean;
+  expanded_row_map: Record<string, boolean>;
+};
+
+const supabaseUrl = 'https://kkygflqiuguflvnjsjpw.supabase.co';
+const supabasePublishableKey = 'sb_publishable_2qGwkTObYMwUuvTh7-3WVQ_lpQ85SND';
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 const seededMissingByRowId: Partial<Record<AlbumRow['id'], number[]>> = {
   PGI: [3, 5, 6, 7],
@@ -101,27 +114,6 @@ const seededMissingByRowId: Partial<Record<AlbumRow['id'], number[]>> = {
   PAN: [19],
   CC: [2, 3, 5, 7, 8, 9, 12, 14],
 };
-
-function readPersistedAppState(): Partial<PersistedAppState> | null {
-  try {
-    const raw = globalThis?.localStorage?.getItem(appStorageKey);
-    if (!raw) {
-      return null;
-    }
-
-    return JSON.parse(raw) as Partial<PersistedAppState>;
-  } catch {
-    return null;
-  }
-}
-
-function savePersistedAppState(state: PersistedAppState) {
-  try {
-    globalThis?.localStorage?.setItem(appStorageKey, JSON.stringify(state));
-  } catch {
-    // persistência indisponível neste ambiente
-  }
-}
 
 const groupColors: Record<string, string> = {
   A: '#f59e0b',
@@ -419,14 +411,23 @@ export default function App() {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  const persistedState = useMemo(() => readPersistedAppState(), []);
+  const defaultExpandedRowMap = useMemo(
+    () => Object.fromEntries(albumRows.map((row) => [row.id, true])),
+    [],
+  );
 
-  const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>(persistedState?.activeTab ?? 'controle');
-  const [search, setSearch] = useState(persistedState?.search ?? '');
-  const [groupFilter, setGroupFilter] = useState<GroupFilter>(persistedState?.groupFilter ?? 'Todos');
-  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(persistedState?.codeCounts ?? seededCodeCounts);
-  const [shareScope, setShareScope] = useState<ShareScope>(persistedState?.shareScope ?? 'ambas');
-  const [showQrCode, setShowQrCode] = useState(persistedState?.showQrCode ?? false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authFeedback, setAuthFeedback] = useState('');
+  const [cloudStatus, setCloudStatus] = useState('');
+  const [cloudHydrated, setCloudHydrated] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>('controle');
+  const [search, setSearch] = useState('');
+  const [groupFilter, setGroupFilter] = useState<GroupFilter>('Todos');
+  const [codeCounts, setCodeCounts] = useState<Record<string, number>>(seededCodeCounts);
+  const [shareScope, setShareScope] = useState<ShareScope>('ambas');
+  const [showQrCode, setShowQrCode] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
   const [pendingShareTarget, setPendingShareTarget] = useState<ShareTarget | null>(null);
   const [qrInput, setQrInput] = useState('');
@@ -435,9 +436,7 @@ export default function App() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [expandedRowMap, setExpandedRowMap] = useState<Record<string, boolean>>(
-    persistedState?.expandedRowMap ?? Object.fromEntries(albumRows.map((row) => [row.id, true])),
-  );
+  const [expandedRowMap, setExpandedRowMap] = useState<Record<string, boolean>>(defaultExpandedRowMap);
 
   const allCodes = useMemo(() => albumRows.flatMap((row) => buildCodes(row)), []);
 
@@ -475,16 +474,121 @@ export default function App() {
   }, [allCodes, codeCounts]);
 
   useEffect(() => {
-    savePersistedAppState({
-      codeCounts,
-      activeTab,
-      search,
-      groupFilter,
-      shareScope,
-      showQrCode,
-      expandedRowMap,
+    let cancelled = false;
+
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled) {
+        setSession(data.session ?? null);
+      }
+    };
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null);
     });
-  }, [activeTab, codeCounts, expandedRowMap, groupFilter, search, shareScope, showQrCode]);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setCloudHydrated(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCloudState = async () => {
+      setCloudStatus('Carregando progresso da nuvem...');
+
+      const { data, error } = await supabase
+        .from('album_states')
+        .select('code_counts, active_tab, search, group_filter, share_scope, show_qr_code, expanded_row_map')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (error) {
+        setCloudStatus('Erro ao carregar da nuvem.');
+        setCloudHydrated(true);
+        return;
+      }
+
+      const row = data as CloudAlbumStateRow | null;
+      if (row) {
+        setCodeCounts(row.code_counts ?? seededCodeCounts);
+        setActiveTab(row.active_tab ?? 'controle');
+        setSearch(row.search ?? '');
+        setGroupFilter(row.group_filter ?? 'Todos');
+        setShareScope(row.share_scope ?? 'ambas');
+        setShowQrCode(Boolean(row.show_qr_code));
+        setExpandedRowMap(row.expanded_row_map ?? defaultExpandedRowMap);
+      }
+
+      setCloudStatus('Nuvem conectada.');
+      setCloudHydrated(true);
+    };
+
+    loadCloudState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultExpandedRowMap, session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id || !cloudHydrated) {
+      return;
+    }
+
+    const syncTimer = setTimeout(async () => {
+      const payload: PersistedAppState = {
+        codeCounts,
+        activeTab,
+        search,
+        groupFilter,
+        shareScope,
+        showQrCode,
+        expandedRowMap,
+      };
+
+      const { error } = await supabase.from('album_states').upsert({
+        user_id: session.user.id,
+        code_counts: payload.codeCounts,
+        active_tab: payload.activeTab,
+        search: payload.search,
+        group_filter: payload.groupFilter,
+        share_scope: payload.shareScope,
+        show_qr_code: payload.showQrCode,
+        expanded_row_map: payload.expandedRowMap,
+        updated_at: new Date().toISOString(),
+      });
+
+      setCloudStatus(error ? 'Falha ao salvar na nuvem.' : 'Progresso salvo na nuvem.');
+    }, 500);
+
+    return () => clearTimeout(syncTimer);
+  }, [
+    activeTab,
+    cloudHydrated,
+    codeCounts,
+    expandedRowMap,
+    groupFilter,
+    search,
+    session?.user?.id,
+    shareScope,
+    showQrCode,
+  ]);
 
   const repeatedGroups = useMemo(() => {
     return albumRows
@@ -970,12 +1074,72 @@ export default function App() {
     setShareFeedback(copied ? 'Conteúdo copiado para a área de transferência.' : 'Não foi possível copiar neste ambiente.');
   };
 
+  const onSendMagicLink = async () => {
+    const email = authEmail.trim();
+    if (!email) {
+      setAuthFeedback('Digite seu e-mail para entrar.');
+      return;
+    }
+
+    const currentHref = (globalThis as any)?.location?.href;
+    const emailRedirectTo = typeof currentHref === 'string' ? currentHref.split('#')[0] : undefined;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo },
+    });
+
+    setAuthFeedback(
+      error
+        ? 'Falha ao enviar link de acesso. Confira o e-mail e tente de novo.'
+        : 'Link enviado. Abra seu e-mail para concluir o login.',
+    );
+  };
+
+  const onSignOut = async () => {
+    await supabase.auth.signOut();
+    setCloudHydrated(false);
+    setCloudStatus('Sessão encerrada.');
+    setAuthFeedback('Sessão encerrada.');
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
 
       <View style={[styles.appFrame, isTablet && styles.appFrameTablet]}>
+      <View style={styles.cloudCard}>
+        {session?.user ? (
+          <>
+            <Text style={styles.cloudTitle}>Sincronização em nuvem ativa</Text>
+            <Text style={styles.cloudSubtitle}>{session.user.email}</Text>
+            {cloudStatus ? <Text style={styles.cloudStatus}>{cloudStatus}</Text> : null}
+            <Pressable onPress={onSignOut} style={styles.cloudButtonSecondary}>
+              <Text style={styles.cloudButtonSecondaryText}>Sair</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.cloudTitle}>Entrar para sincronizar na nuvem</Text>
+            <TextInput
+              value={authEmail}
+              onChangeText={setAuthEmail}
+              placeholder="Seu e-mail"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={styles.cloudInput}
+            />
+            <Pressable onPress={onSendMagicLink} style={styles.cloudButtonPrimary}>
+              <Text style={styles.cloudButtonPrimaryText}>Enviar link de acesso</Text>
+            </Pressable>
+            <Text style={styles.cloudHint}>Use o mesmo e-mail no celular e no computador para manter tudo sincronizado.</Text>
+            {authFeedback ? <Text style={styles.cloudStatus}>{authFeedback}</Text> : null}
+          </>
+        )}
+      </View>
+
       <View style={[styles.tabRow, isTablet && styles.tabRowTablet]}>
         <Pressable
           style={[styles.tabButton, isTablet && styles.tabButtonTablet, activeTab === 'controle' && styles.tabButtonActive]}
@@ -1593,6 +1757,74 @@ const styles = StyleSheet.create({
   appFrameTablet: {
     alignSelf: 'center',
     maxWidth: 980,
+  },
+  cloudCard: {
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1f2a3d',
+    backgroundColor: '#0b1326',
+    padding: 12,
+    gap: 8,
+  },
+  cloudTitle: {
+    color: '#e2e8f0',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  cloudSubtitle: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cloudInput: {
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#fff',
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  cloudButtonPrimary: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#60a5fa',
+    backgroundColor: '#1d4ed8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  cloudButtonPrimaryText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  cloudButtonSecondary: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#475569',
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  cloudButtonSecondaryText: {
+    color: '#e2e8f0',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  cloudHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  cloudStatus: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
   },
   tabRow: {
     flexDirection: 'row',
