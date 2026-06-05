@@ -459,7 +459,7 @@ export default function App() {
   const [parsedQrData, setParsedQrData] = useState<ParsedQrData | null>(null);
   const [qrFeedback, setQrFeedback] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scannerCanRead, setScannerCanRead] = useState(false);
+  const [scannerReadyAt, setScannerReadyAt] = useState(0);
   const [scannerLocked, setScannerLocked] = useState(false);
   const [scannerError, setScannerError] = useState('');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -1058,10 +1058,10 @@ export default function App() {
       }
 
       setScannerError('');
-      setScannerCanRead(false);
       setScannerLocked(false);
+      setScannerReadyAt(Date.now() + 1200);
       setScannerOpen(true);
-      setQrFeedback('Câmera aberta. Toque em "Iniciar leitura" para escanear o QR.');
+      setQrFeedback('Abrindo câmera... aponte para o QR.');
     } catch {
       setScannerError('Não foi possível inicializar a câmera neste dispositivo.');
       setQrFeedback('Falha ao abrir câmera. Use a opção de colar o QR.');
@@ -1070,6 +1070,10 @@ export default function App() {
 
   const onScanQr = ({ data }: { data: string }) => {
     if (scannerLocked) {
+      return;
+    }
+
+    if (Date.now() < scannerReadyAt) {
       return;
     }
 
@@ -1728,28 +1732,19 @@ export default function App() {
                     {scannerError ? <Text style={styles.scannerError}>{scannerError}</Text> : null}
                     <CameraView
                       style={styles.scannerView}
+                      active={scannerOpen}
                       facing="back"
                       onMountError={() => {
                         setScannerError('A câmera não conseguiu iniciar neste aparelho.');
                         setQrFeedback('A câmera não abriu. Use a opção de colar o QR.');
                       }}
-                      onBarcodeScanned={!scannerCanRead || scannerLocked ? undefined : onScanQr}
+                      onBarcodeScanned={scannerLocked ? undefined : onScanQr}
                       barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                     />
                     <Text style={styles.scannerHint}>
                       Enquadre o QR dentro da área da câmera.
                       {isIosWeb ? ' No iPhone, permita câmera para este site no Safari.' : ''}
                     </Text>
-                    <Pressable
-                      style={styles.scannerCloseButton}
-                      onPress={() => {
-                        setScannerLocked(false);
-                        setScannerCanRead(true);
-                        setQrFeedback('Leitura iniciada. Aponte para o QR.');
-                      }}
-                    >
-                      <Text style={styles.scannerCloseButtonText}>Iniciar leitura</Text>
-                    </Pressable>
                     <Pressable style={styles.scannerCloseButton} onPress={() => setScannerOpen(false)}>
                       <Text style={styles.scannerCloseButtonText}>Fechar câmera</Text>
                     </Pressable>
