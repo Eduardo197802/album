@@ -8,7 +8,6 @@
     "expo-camera": "~56.0.7",
     "expo-clipboard": "~56.0.3",
     "expo-status-bar": "~56.0.4",
-    "jsqr": "^1.4.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",

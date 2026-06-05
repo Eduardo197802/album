@@ -1,7 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Clipboard from 'expo-clipboard';
-import jsQR from 'jsqr';
 import QRCode from 'react-native-qrcode-svg';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient, type Session } from '@supabase/supabase-js';
@@ -1071,68 +1070,26 @@ export default function App() {
           return;
         }
 
+        const BarcodeDetectorCtor = (globalThis as any)?.BarcodeDetector;
+        if (!BarcodeDetectorCtor) {
+          setQrFeedback('Seu navegador não suporta leitura por foto. Use Ler com câmera ou Ler texto colado.');
+          return;
+        }
+
+        const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
         const imageUrl = URL.createObjectURL(file);
 
         try {
           const BrowserImage = (globalThis as any).Image;
           const img = new BrowserImage();
           img.src = imageUrl;
-          if (typeof img.decode === 'function') {
-            await img.decode();
-          } else {
-            await new Promise<void>((resolve, reject) => {
-              img.onload = () => resolve();
-              img.onerror = () => reject(new Error('Falha ao carregar imagem.'));
-            });
-          }
-
-          let payload = '';
-          const BarcodeDetectorCtor = (globalThis as any)?.BarcodeDetector;
-          if (BarcodeDetectorCtor) {
-            try {
-              const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
-              const result = await detector.detect(img);
-              payload = result?.[0]?.rawValue ?? '';
-            } catch {
-              payload = '';
-            }
-          }
-
-          if (!payload) {
-            const width = Number(img.naturalWidth || img.width || 0);
-            const height = Number(img.naturalHeight || img.height || 0);
-            if (!width || !height) {
-              setParsedQrData(null);
-              setQrFeedback('Não foi possível processar a foto. Tente novamente.');
-              return;
-            }
-
-            const maxDimension = 1600;
-            const scale = Math.min(1, maxDimension / Math.max(width, height));
-            const targetWidth = Math.max(1, Math.round(width * scale));
-            const targetHeight = Math.max(1, Math.round(height * scale));
-
-            const canvas = doc.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            if (!context) {
-              setParsedQrData(null);
-              setQrFeedback('Navegador não suportou leitura da imagem.');
-              return;
-            }
-
-            context.drawImage(img, 0, 0, targetWidth, targetHeight);
-            const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
-            const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth',
-            });
-            payload = decoded?.data ?? '';
-          }
+          await img.decode();
+          const result = await detector.detect(img);
+          const payload = result?.[0]?.rawValue;
 
           if (!payload) {
             setParsedQrData(null);
-            setQrFeedback('Não foi possível identificar QR na foto. Tente uma imagem mais nítida e próxima.');
+            setQrFeedback('Não foi possível identificar QR na foto. Tente novamente.');
             return;
           }
 
