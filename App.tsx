@@ -418,6 +418,7 @@ export default function App() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
   const [cloudStatus, setCloudStatus] = useState('');
   const [cloudHydrated, setCloudHydrated] = useState(false);
@@ -1074,25 +1075,41 @@ export default function App() {
     setShareFeedback(copied ? 'Conteúdo copiado para a área de transferência.' : 'Não foi possível copiar neste ambiente.');
   };
 
-  const onSendMagicLink = async () => {
+  const onSignInWithPassword = async () => {
     const email = authEmail.trim();
-    if (!email) {
-      setAuthFeedback('Digite seu e-mail para entrar.');
+    if (!email || !authPassword) {
+      setAuthFeedback('Digite e-mail e senha para entrar.');
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: authPassword,
+    });
+
+    setAuthFeedback(error ? 'Falha no login. Confira e-mail e senha.' : 'Login realizado com sucesso.');
+  };
+
+  const onCreateAccount = async () => {
+    const email = authEmail.trim();
+    if (!email || !authPassword) {
+      setAuthFeedback('Digite e-mail e senha para criar a conta.');
       return;
     }
 
     const currentHref = (globalThis as any)?.location?.href;
     const emailRedirectTo = typeof currentHref === 'string' ? currentHref.split('#')[0] : undefined;
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signUp({
       email,
+      password: authPassword,
       options: { emailRedirectTo },
     });
 
     setAuthFeedback(
       error
-        ? 'Falha ao enviar link de acesso. Confira o e-mail e tente de novo.'
-        : 'Link enviado. Abra seu e-mail para concluir o login.',
+        ? 'Falha ao criar conta. Tente outro e-mail ou senha mais forte.'
+        : 'Conta criada. Confira seu e-mail para confirmar, se solicitado.',
     );
   };
 
@@ -1131,10 +1148,24 @@ export default function App() {
               keyboardType="email-address"
               style={styles.cloudInput}
             />
-            <Pressable onPress={onSendMagicLink} style={styles.cloudButtonPrimary}>
-              <Text style={styles.cloudButtonPrimaryText}>Enviar link de acesso</Text>
-            </Pressable>
-            <Text style={styles.cloudHint}>Use o mesmo e-mail no celular e no computador para manter tudo sincronizado.</Text>
+            <TextInput
+              value={authPassword}
+              onChangeText={setAuthPassword}
+              placeholder="Sua senha"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="none"
+              secureTextEntry
+              style={styles.cloudInput}
+            />
+            <View style={styles.cloudButtonRow}>
+              <Pressable onPress={onSignInWithPassword} style={[styles.cloudButtonPrimary, styles.cloudButtonHalf]}>
+                <Text style={styles.cloudButtonPrimaryText}>Entrar</Text>
+              </Pressable>
+              <Pressable onPress={onCreateAccount} style={[styles.cloudButtonSecondary, styles.cloudButtonHalf]}>
+                <Text style={styles.cloudButtonSecondaryText}>Criar conta</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.cloudHint}>Use o mesmo login no celular e no computador para manter tudo sincronizado.</Text>
             {authFeedback ? <Text style={styles.cloudStatus}>{authFeedback}</Text> : null}
           </>
         )}
@@ -1802,6 +1833,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '800',
+  },
+  cloudButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cloudButtonHalf: {
+    flex: 1,
   },
   cloudButtonSecondary: {
     borderRadius: 10,
