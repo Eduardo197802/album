@@ -345,6 +345,10 @@ function chipLabel(code: string) {
   return code;
 }
 
+function isGoldenSticker(code: string) {
+  return code === '00' || code.startsWith('FWC') || code.endsWith('01');
+}
+
 function shareCodeLabel(code: string) {
   return code;
 }
@@ -1318,15 +1322,28 @@ export default function App() {
                       {codes.map((code) => {
                         const qty = codeCounts[code] ?? 0;
                         const collected = qty > 0;
+                        const goldenMissing = !collected && isGoldenSticker(code);
 
                         return (
                           <Pressable
                             key={code}
                             onPress={() => incrementCode(code)}
                             onLongPress={() => decrementCode(code)}
-                            style={[styles.codeChip, isTablet && styles.codeChipTablet, collected && styles.codeChipCollected]}
+                            style={[
+                              styles.codeChip,
+                              isTablet && styles.codeChipTablet,
+                              collected && styles.codeChipCollected,
+                              goldenMissing && styles.codeChipGolden,
+                            ]}
                           >
-                            <Text style={[styles.codeChipText, isTablet && styles.codeChipTextTablet, collected && styles.codeChipTextCollected]}>
+                            <Text
+                              style={[
+                                styles.codeChipText,
+                                isTablet && styles.codeChipTextTablet,
+                                collected && styles.codeChipTextCollected,
+                                goldenMissing && styles.codeChipTextGolden,
+                              ]}
+                            >
                               {chipLabel(code)}{qty > 1 ? ` X${qty - 1}` : ''}
                             </Text>
                           </Pressable>
@@ -1567,8 +1584,23 @@ export default function App() {
 
                         <View style={styles.missingCodesGrid}>
                           {entry.items.map((code) => (
-                            <View key={code} style={[styles.missingCodeChip, isTablet && styles.missingCodeChipTablet]}>
-                              <Text style={[styles.missingCodeText, isTablet && styles.missingCodeTextTablet]}>{chipLabel(code)}</Text>
+                            <View
+                              key={code}
+                              style={[
+                                styles.missingCodeChip,
+                                isTablet && styles.missingCodeChipTablet,
+                                isGoldenSticker(code) && styles.missingCodeChipGolden,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.missingCodeText,
+                                  isTablet && styles.missingCodeTextTablet,
+                                  isGoldenSticker(code) && styles.missingCodeTextGolden,
+                                ]}
+                              >
+                                {chipLabel(code)}
+                              </Text>
                             </View>
                           ))}
                         </View>
@@ -2460,10 +2492,17 @@ const styles = StyleSheet.create({
     minWidth: 68,
     paddingVertical: 7,
   },
+  missingCodeChipGolden: {
+    backgroundColor: '#3a2f10',
+    borderColor: '#d4a53a',
+  },
   missingCodeText: {
     color: '#dbe4f0',
     fontSize: 10,
     fontWeight: '800',
+  },
+  missingCodeTextGolden: {
+    color: '#fde68a',
   },
   missingCodeTextTablet: {
     fontSize: 11,
@@ -2623,6 +2662,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#12311f',
     borderColor: '#22c55e',
   },
+  codeChipGolden: {
+    backgroundColor: '#3a2f10',
+    borderColor: '#d4a53a',
+  },
   codeChipText: {
     color: '#dbe4f0',
     fontSize: 10,
@@ -2633,6 +2676,9 @@ const styles = StyleSheet.create({
   },
   codeChipTextCollected: {
     color: '#bbf7d0',
+  },
+  codeChipTextGolden: {
+    color: '#fde68a',
   },
   expandText: {
     color: '#94a3b8',
