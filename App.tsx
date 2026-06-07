@@ -143,9 +143,9 @@ const albumRows: AlbumRow[] = [
   { id: 'MEX', group: 'A', country: 'México', prefix: 'MEX', total: 20 },
   { id: 'RSA', group: 'A', country: 'África do Sul', prefix: 'RSA', total: 20 },
   { id: 'KOR', group: 'A', country: 'Coreia do Sul', prefix: 'KOR', total: 20 },
-  { id: 'CZE', group: 'A', country: 'Rep. Tcheca', prefix: 'CZE', total: 20 },
+  { id: 'CZE', group: 'A', country: 'República Tcheca', prefix: 'CZE', total: 20 },
   { id: 'CAN', group: 'B', country: 'Canadá', prefix: 'CAN', total: 20 },
-  { id: 'BIH', group: 'B', country: 'Bósnia', prefix: 'BIH', total: 20 },
+  { id: 'BIH', group: 'B', country: 'Bósnia e Herzegovina', prefix: 'BIH', total: 20 },
   { id: 'QAT', group: 'B', country: 'Catar', prefix: 'QAT', total: 20 },
   { id: 'SUI', group: 'B', country: 'Suíça', prefix: 'SUI', total: 20 },
   { id: 'BRA', group: 'C', country: 'Brasil', prefix: 'BRA', total: 20 },
@@ -160,7 +160,7 @@ const albumRows: AlbumRow[] = [
   { id: 'CUW', group: 'E', country: 'Curaçau', prefix: 'CUW', total: 20 },
   { id: 'CIV', group: 'E', country: 'Costa do Marfim', prefix: 'CIV', total: 20 },
   { id: 'ECU', group: 'E', country: 'Equador', prefix: 'ECU', total: 20 },
-  { id: 'NED', group: 'F', country: 'Holanda', prefix: 'NED', total: 20 },
+  { id: 'NED', group: 'F', country: 'Países Baixos', prefix: 'NED', total: 20 },
   { id: 'JPN', group: 'F', country: 'Japão', prefix: 'JPN', total: 20 },
   { id: 'SWE', group: 'F', country: 'Suécia', prefix: 'SWE', total: 20 },
   { id: 'TUN', group: 'F', country: 'Tunísia', prefix: 'TUN', total: 20 },
@@ -445,7 +445,6 @@ export default function App() {
   const [authFeedback, setAuthFeedback] = useState('');
   const [authPending, setAuthPending] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('');
-  const [excelSyncStatus, setExcelSyncStatus] = useState('');
   const [cloudHydrated, setCloudHydrated] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>('controle');
@@ -682,30 +681,6 @@ export default function App() {
       ),
     [missingGroups],
   );
-
-  useEffect(() => {
-    if (!session?.user?.id || !cloudHydrated) {
-      setExcelSyncStatus('');
-      return;
-    }
-
-    const excelSyncTimer = setTimeout(async () => {
-      const { error } = await supabase.from('excel_missing_states').upsert({
-        user_id: session.user.id,
-        missing_codes: missingCompact,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        setExcelSyncStatus('Excel Online: configure a tabela excel_missing_states no Supabase.');
-        return;
-      }
-
-      setExcelSyncStatus(`Excel Online sincronizado: ${missingCompact.length} faltantes.`);
-    }, 800);
-
-    return () => clearTimeout(excelSyncTimer);
-  }, [cloudHydrated, missingCompact, session?.user?.id]);
 
   const formatCodesByLines = (labels: string[]) => {
     const lines: string[] = [];
@@ -1676,7 +1651,6 @@ export default function App() {
                   ) : null}
 
                   {shareFeedback ? <Text style={styles.shareFeedback}>{shareFeedback}</Text> : null}
-                  {excelSyncStatus ? <Text style={styles.shareFeedback}>{excelSyncStatus}</Text> : null}
                 </View>
 
                 <View style={styles.statsActionRow}>
@@ -1727,24 +1701,16 @@ export default function App() {
             ) : activeTab === 'faltantes' ? (
               <View style={styles.repeatedBlock}>
                 <Text style={styles.repeatedTitle}>Figurinhas faltantes</Text>
-                {excelSyncStatus ? <Text style={styles.shareFeedback}>{excelSyncStatus}</Text> : null}
                 {missingGroups.length === 0 ? (
                   <Text style={styles.empty}>Álbum completo. Nenhuma faltante.</Text>
                 ) : (
                   <View style={styles.repeatedList}>
-                    {missingGroups.map((entry) => {
-                      const missingCount = entry.items.length;
-
-                      return (
+                    {missingGroups.map((entry) => (
                       <View key={entry.row.id} style={styles.repeatedGroupCard}>
                         <View style={styles.repeatedHeaderRow}>
                           <FlagIcon rowId={entry.row.id} fallback={flagForRow(entry.row)} />
                           <View>
                             <Text style={styles.repeatedCountry}>{entry.row.country}</Text>
-                          </View>
-                          <View style={styles.missingProgressBox}>
-                            <Text style={styles.missingProgressValue}>{missingCount}/{entry.row.total}</Text>
-                            <Text style={styles.missingProgressLabel}>FALTAM</Text>
                           </View>
                         </View>
 
@@ -1775,7 +1741,7 @@ export default function App() {
                           ))}
                         </View>
                       </View>
-                    );})}
+                    ))}
                   </View>
                 )}
               </View>
@@ -2710,22 +2676,6 @@ const styles = StyleSheet.create({
   },
   missingCodeTextTablet: {
     fontSize: 11,
-  },
-  missingProgressBox: {
-    marginLeft: 'auto',
-    alignItems: 'flex-end',
-  },
-  missingProgressValue: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 24,
-  },
-  missingProgressLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
   },
   toolbar: {
     gap: 12,
