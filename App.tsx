@@ -181,7 +181,7 @@ const albumRows: AlbumRow[] = [
   { id: 'AUT', group: 'J', country: 'Áustria', prefix: 'AUT', total: 20 },
   { id: 'JOR', group: 'J', country: 'Jordânia', prefix: 'JOR', total: 20 },
   { id: 'POR', group: 'K', country: 'Portugal', prefix: 'POR', total: 20 },
-  { id: 'COD', group: 'K', country: 'Congo', prefix: 'COD', total: 20 },
+  { id: 'COD', group: 'K', country: 'RD Congo', prefix: 'COD', total: 20 },
   { id: 'UZB', group: 'K', country: 'Uzbequistão', prefix: 'UZB', total: 20 },
   { id: 'COL', group: 'K', country: 'Colômbia', prefix: 'COL', total: 20 },
   { id: 'ENG', group: 'L', country: 'Inglaterra', prefix: 'ENG', total: 20 },
@@ -681,6 +681,35 @@ export default function App() {
       ),
     [missingGroups],
   );
+
+  const countryMap = useMemo(
+    () => Object.fromEntries(albumRows.map((row) => [row.prefix, row.country])),
+    [],
+  );
+
+  const missingByCountry = useMemo(() => {
+    return Object.fromEntries(
+      missingGroups.map((entry) => [entry.row.country, entry.items]),
+    );
+  }, [missingGroups]);
+
+  useEffect(() => {
+    if (!session?.user?.id || !cloudHydrated) {
+      return;
+    }
+
+    const excelSyncTimer = setTimeout(async () => {
+      await supabase.from('excel_missing_states').upsert({
+        user_id: session.user.id,
+        missing_codes: missingCompact,
+        country_map: countryMap,
+        missing_by_country: missingByCountry,
+        updated_at: new Date().toISOString(),
+      });
+    }, 800);
+
+    return () => clearTimeout(excelSyncTimer);
+  }, [cloudHydrated, countryMap, missingByCountry, missingCompact, session?.user?.id]);
 
   const formatCodesByLines = (labels: string[]) => {
     const lines: string[] = [];
