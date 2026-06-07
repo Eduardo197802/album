@@ -1716,8 +1716,10 @@ export default function App() {
 
                         <View style={styles.missingCodesGrid}>
                           {entry.items.map((code) => (
-                            <View
+                            <Pressable
                               key={code}
+                              onPress={() => incrementCode(code)}
+                              onLongPress={() => decrementCode(code)}
                               style={[
                                 styles.missingCodeChip,
                                 isTablet && styles.missingCodeChipTablet,
@@ -1735,7 +1737,7 @@ export default function App() {
                               >
                                 {chipLabel(code)}
                               </Text>
-                            </View>
+                            </Pressable>
                           ))}
                         </View>
                       </View>
