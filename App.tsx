@@ -1727,16 +1727,24 @@ export default function App() {
             ) : activeTab === 'faltantes' ? (
               <View style={styles.repeatedBlock}>
                 <Text style={styles.repeatedTitle}>Figurinhas faltantes</Text>
+                {excelSyncStatus ? <Text style={styles.shareFeedback}>{excelSyncStatus}</Text> : null}
                 {missingGroups.length === 0 ? (
                   <Text style={styles.empty}>Álbum completo. Nenhuma faltante.</Text>
                 ) : (
                   <View style={styles.repeatedList}>
-                    {missingGroups.map((entry) => (
+                    {missingGroups.map((entry) => {
+                      const collectedCount = entry.row.total - entry.items.length;
+
+                      return (
                       <View key={entry.row.id} style={styles.repeatedGroupCard}>
                         <View style={styles.repeatedHeaderRow}>
                           <FlagIcon rowId={entry.row.id} fallback={flagForRow(entry.row)} />
                           <View>
                             <Text style={styles.repeatedCountry}>{entry.row.country}</Text>
+                          </View>
+                          <View style={styles.missingProgressBox}>
+                            <Text style={styles.missingProgressValue}>{collectedCount}/{entry.row.total}</Text>
+                            <Text style={styles.missingProgressLabel}>COLECIONADAS</Text>
                           </View>
                         </View>
 
@@ -1767,7 +1775,7 @@ export default function App() {
                           ))}
                         </View>
                       </View>
-                    ))}
+                    );})}
                   </View>
                 )}
               </View>
@@ -2702,6 +2710,22 @@ const styles = StyleSheet.create({
   },
   missingCodeTextTablet: {
     fontSize: 11,
+  },
+  missingProgressBox: {
+    marginLeft: 'auto',
+    alignItems: 'flex-end',
+  },
+  missingProgressValue: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 24,
+  },
+  missingProgressLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
   },
   toolbar: {
     gap: 12,
