@@ -1733,7 +1733,7 @@ export default function App() {
                 ) : (
                   <View style={styles.repeatedList}>
                     {missingGroups.map((entry) => {
-                      const collectedCount = entry.row.total - entry.items.length;
+                      const missingCount = entry.items.length;
 
                       return (
                       <View key={entry.row.id} style={styles.repeatedGroupCard}>
@@ -1743,8 +1743,8 @@ export default function App() {
                             <Text style={styles.repeatedCountry}>{entry.row.country}</Text>
                           </View>
                           <View style={styles.missingProgressBox}>
-                            <Text style={styles.missingProgressValue}>{collectedCount}/{entry.row.total}</Text>
-                            <Text style={styles.missingProgressLabel}>COLECIONADAS</Text>
+                            <Text style={styles.missingProgressValue}>{missingCount}/{entry.row.total}</Text>
+                            <Text style={styles.missingProgressLabel}>FALTAM</Text>
                           </View>
                         </View>
 
