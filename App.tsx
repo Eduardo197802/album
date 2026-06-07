@@ -687,10 +687,12 @@ export default function App() {
     [],
   );
 
+  // Array ordenado igual ao app (preserva ordem no Supabase)
   const missingByCountry = useMemo(() => {
-    return Object.fromEntries(
-      missingGroups.map((entry) => [entry.row.country, entry.items]),
-    );
+    return missingGroups.map((entry) => ({
+      pais: entry.row.country,
+      codigos: entry.items,
+    }));
   }, [missingGroups]);
 
   useEffect(() => {
