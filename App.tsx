@@ -445,6 +445,7 @@ export default function App() {
   const [authFeedback, setAuthFeedback] = useState('');
   const [authPending, setAuthPending] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('');
+  const [excelSyncStatus, setExcelSyncStatus] = useState('');
   const [cloudHydrated, setCloudHydrated] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'controle' | 'estatistica' | 'repetidas' | 'faltantes' | 'troca'>('controle');
@@ -635,6 +636,30 @@ export default function App() {
     shareScope,
     showQrCode,
   ]);
+
+  useEffect(() => {
+    if (!session?.user?.id || !cloudHydrated) {
+      setExcelSyncStatus('');
+      return;
+    }
+
+    const excelSyncTimer = setTimeout(async () => {
+      const { error } = await supabase.from('excel_missing_states').upsert({
+        user_id: session.user.id,
+        missing_codes: missingCompact,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        setExcelSyncStatus('Excel Online: configure a tabela excel_missing_states no Supabase.');
+        return;
+      }
+
+      setExcelSyncStatus(`Excel Online sincronizado: ${missingCompact.length} faltantes.`);
+    }, 800);
+
+    return () => clearTimeout(excelSyncTimer);
+  }, [cloudHydrated, missingCompact, session?.user?.id]);
 
   const repeatedGroups = useMemo(() => {
     return albumRows
@@ -1651,6 +1676,7 @@ export default function App() {
                   ) : null}
 
                   {shareFeedback ? <Text style={styles.shareFeedback}>{shareFeedback}</Text> : null}
+                  {excelSyncStatus ? <Text style={styles.shareFeedback}>{excelSyncStatus}</Text> : null}
                 </View>
 
                 <View style={styles.statsActionRow}>
