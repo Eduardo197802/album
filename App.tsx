@@ -637,30 +637,6 @@ export default function App() {
     showQrCode,
   ]);
 
-  useEffect(() => {
-    if (!session?.user?.id || !cloudHydrated) {
-      setExcelSyncStatus('');
-      return;
-    }
-
-    const excelSyncTimer = setTimeout(async () => {
-      const { error } = await supabase.from('excel_missing_states').upsert({
-        user_id: session.user.id,
-        missing_codes: missingCompact,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        setExcelSyncStatus('Excel Online: configure a tabela excel_missing_states no Supabase.');
-        return;
-      }
-
-      setExcelSyncStatus(`Excel Online sincronizado: ${missingCompact.length} faltantes.`);
-    }, 800);
-
-    return () => clearTimeout(excelSyncTimer);
-  }, [cloudHydrated, missingCompact, session?.user?.id]);
-
   const repeatedGroups = useMemo(() => {
     return albumRows
       .map((row) => {
@@ -706,6 +682,30 @@ export default function App() {
       ),
     [missingGroups],
   );
+
+  useEffect(() => {
+    if (!session?.user?.id || !cloudHydrated) {
+      setExcelSyncStatus('');
+      return;
+    }
+
+    const excelSyncTimer = setTimeout(async () => {
+      const { error } = await supabase.from('excel_missing_states').upsert({
+        user_id: session.user.id,
+        missing_codes: missingCompact,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        setExcelSyncStatus('Excel Online: configure a tabela excel_missing_states no Supabase.');
+        return;
+      }
+
+      setExcelSyncStatus(`Excel Online sincronizado: ${missingCompact.length} faltantes.`);
+    }, 800);
+
+    return () => clearTimeout(excelSyncTimer);
+  }, [cloudHydrated, missingCompact, session?.user?.id]);
 
   const formatCodesByLines = (labels: string[]) => {
     const lines: string[] = [];
