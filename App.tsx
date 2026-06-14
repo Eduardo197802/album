@@ -1710,18 +1710,10 @@ export default function App() {
 
                         <View style={styles.repeatedCodesWrap}>
                           {entry.items.map((item) => (
-                            <View key={item.code} style={styles.repeatedItem}>
-                              <Pressable onPress={() => decrementCode(item.code)} style={styles.repeatedCodeTapArea}>
+                            <Pressable key={item.code} onPress={() => decrementCode(item.code)} style={styles.repeatedItem}>
                                 <Text style={styles.repeatedCode}>{chipLabel(item.code)}</Text>
                                 {item.amount > 1 ? <Text style={styles.repeatedQty}>X{item.amount}</Text> : null}
-                              </Pressable>
-                              <Pressable
-                                onPress={() => decrementCode(item.code)}
-                                style={styles.repeatedRemoveButton}
-                              >
-                                <Text style={styles.repeatedRemoveButtonText}>-1</Text>
-                              </Pressable>
-                            </View>
+                            </Pressable>
                           ))}
                         </View>
                       </View>
@@ -2660,12 +2652,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    overflow: 'hidden',
-  },
-  repeatedCodeTapArea: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     flexDirection: 'row',
@@ -2681,20 +2667,6 @@ const styles = StyleSheet.create({
     color: '#fbbf24',
     fontSize: 13,
     fontWeight: '800',
-  },
-  repeatedRemoveButton: {
-    backgroundColor: '#7f1d1d',
-    borderLeftWidth: 1,
-    borderLeftColor: '#ef4444',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  repeatedRemoveButtonText: {
-    color: '#fee2e2',
-    fontSize: 12,
-    fontWeight: '900',
   },
   missingCodesGrid: {
     flexDirection: 'row',
