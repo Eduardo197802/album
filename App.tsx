@@ -687,9 +687,10 @@ export default function App() {
     [],
   );
 
-  // Array ordenado igual ao app (preserva ordem no Supabase)
+  // Array ordenado igual ao app, com ordem explícita para o Excel respeitar a sequência.
   const missingByCountry = useMemo(() => {
-    return missingGroups.map((entry) => ({
+    return missingGroups.map((entry, index) => ({
+      ordem: index,
       pais: entry.row.country,
       codigos: entry.items,
     }));
@@ -1693,6 +1694,7 @@ export default function App() {
             ) : activeTab === 'repetidas' ? (
               <View style={styles.repeatedBlock}>
                 <Text style={styles.repeatedTitle}>Figurinhas repetidas</Text>
+                <Text style={styles.sectionHint}>Toque na figurinha repetida para desmarcar uma unidade.</Text>
                 {repeatedGroups.length === 0 ? (
                   <Text style={styles.empty}>Nenhuma repetida ainda.</Text>
                 ) : (
@@ -1708,10 +1710,14 @@ export default function App() {
 
                         <View style={styles.repeatedCodesWrap}>
                           {entry.items.map((item) => (
-                            <View key={item.code} style={styles.repeatedItem}>
+                            <Pressable
+                              key={item.code}
+                              onPress={() => decrementCode(item.code)}
+                              style={styles.repeatedItem}
+                            >
                               <Text style={styles.repeatedCode}>{chipLabel(item.code)}</Text>
                               {item.amount > 1 ? <Text style={styles.repeatedQty}>X{item.amount}</Text> : null}
-                            </View>
+                            </Pressable>
                           ))}
                         </View>
                       </View>
